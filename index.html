@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Votação do Estatuto Legado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,650&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: assembleia em pauta — placar no topo, decisões agrupadas em cartões de votação, ajustes automáticos ao final */
+:root{
+  --bg:#F4F6F3; --surface:#FFFFFF; --sunk:#E9EDE8; --line:#D6DDD5;
+  --fg:#18221E; --muted:#5A6A62; --accent:#1F6352; --accent-soft:#DCEAE4;
+  --yes:#2D7A4B; --yes-soft:#DDEFE3; --no:#B0432E; --no-soft:#F6E1DB; --ask:#9A6E0B; --ask-soft:#F5EACB;
+  --display:"Literata",Georgia,"Times New Roman",serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121815; --surface:#1A221E; --sunk:#222C27; --line:#33403A;
+  --fg:#E6ECE8; --muted:#9AAAA2; --accent:#6CC1A6; --accent-soft:#1E3A31;
+  --yes:#6CC48D; --yes-soft:#1D3527; --no:#EC8A74; --no-soft:#3D231D; --ask:#E3B754; --ask-soft:#3A2F14; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121815; --surface:#1A221E; --sunk:#222C27; --line:#33403A;
+  --fg:#E6ECE8; --muted:#9AAAA2; --accent:#6CC1A6; --accent-soft:#1E3A31;
+  --yes:#6CC48D; --yes-soft:#1D3527; --no:#EC8A74; --no-soft:#3D231D; --ask:#E3B754; --ask-soft:#3A2F14; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:880px;margin:0 auto}
+header.top{padding-block:28px 18px;display:grid;gap:14px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+h1{font-family:var(--display);font-weight:650;font-size:clamp(26px,4.5vw,36px);line-height:1.15;margin:0;text-wrap:balance}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+.me{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted);flex-wrap:wrap}
+.me img{width:26px;height:26px;border-radius:50%}
+.notice{background:var(--ask-soft);color:var(--fg);border-radius:10px;padding:10px 14px;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.stat b{display:block;font-family:var(--display);font-size:24px;font-weight:650;font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:5px 12px;font:500 13px var(--body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.chip:focus-visible,button:focus-visible,textarea:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section.sec{margin-top:26px}
+section.sec h2{font-family:var(--display);font-weight:650;font-size:20px;margin:0 0 4px}
+section.sec .sub{color:var(--muted);font-size:13.5px;margin:0 0 12px}
+.items{display:grid;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px;min-width:0}
+.card.decided-inc{box-shadow:inset 4px 0 0 var(--yes)}
+.card.decided-exc{box-shadow:inset 4px 0 0 var(--no)}
+.card.decided-dis{box-shadow:inset 4px 0 0 var(--ask)}
+.head{display:flex;gap:12px;align-items:flex-start}
+.code{font:600 13px var(--body);color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px;flex:none;font-variant-numeric:tabular-nums}
+.title{font-weight:600;font-size:16px;margin:0;min-width:0}
+.why{color:var(--muted);font-size:14px;margin:4px 0 0}
+.inc{margin:8px 0 0;padding-left:18px;font-size:14px;display:grid;gap:2px}
+.meaning{font-size:13px;color:var(--muted);background:var(--sunk);border-radius:8px;padding:7px 10px;margin:8px 0 0}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tag{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--muted)}
+.tag.p0{border-color:var(--no);color:var(--no)}
+.tag.dec{border:none;font-weight:700}
+.tag.dec.inc{background:var(--yes-soft);color:var(--yes)}.tag.dec.exc{background:var(--no-soft);color:var(--no)}.tag.dec.dis{background:var(--ask-soft);color:var(--ask)}
+.vote{display:flex;gap:6px;flex-wrap:wrap}
+.vbtn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:7px 12px;font:600 13.5px var(--body);cursor:pointer;display:flex;gap:6px;align-items:center}
+.vbtn .n{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:500}
+.vbtn.yes[aria-pressed="true"]{background:var(--yes-soft);border-color:var(--yes);color:var(--yes)}
+.vbtn.no[aria-pressed="true"]{background:var(--no-soft);border-color:var(--no);color:var(--no)}
+.vbtn.ask[aria-pressed="true"]{background:var(--ask-soft);border-color:var(--ask);color:var(--ask)}
+.vbtn:disabled{cursor:default;opacity:.85}
+.tally{height:6px;border-radius:3px;background:var(--sunk);display:flex;overflow:hidden}
+.tally i{display:block}
+.tally .y{background:var(--yes)}.tally .n{background:var(--no)}.tally .a{background:var(--ask)}
+.who{font-size:13px;color:var(--muted);display:grid;gap:2px}
+.who b{font-weight:600}
+.note{display:grid;gap:6px}
+.note textarea{width:100%;min-height:56px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:14px/1.45 var(--body);padding:8px 10px}
+.note .act{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.save{border:none;background:var(--accent);color:var(--bg);border-radius:7px;padding:6px 12px;font:600 13px var(--body);cursor:pointer}
+.save:disabled{opacity:.5;cursor:default}
+.status{font-size:12.5px;color:var(--muted)}
+.comments{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.cm{display:flex;gap:9px;align-items:flex-start}
+.cm img{width:24px;height:24px;border-radius:50%;flex:none;margin-top:1px}
+.cm div{min-width:0;font-size:14px}
+.cm .nm{font-weight:600}
+.cm .pill{font-size:11px;border-radius:4px;padding:0 5px;margin-left:6px;font-weight:600}
+.pill.yes{background:var(--yes-soft);color:var(--yes)}.pill.no{background:var(--no-soft);color:var(--no)}.pill.ask{background:var(--ask-soft);color:var(--ask)}
+.cm p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.admin{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.admin select{font:14px var(--body);border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);padding:4px 8px}
+.empty{color:var(--muted);text-align:center;padding:30px 0}
+.auto{margin-top:34px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px}
+.auto h2{font-family:var(--display);font-weight:650;font-size:20px;margin:0}
+.auto details{border-top:1px solid var(--line);padding-top:10px}
+.auto summary{cursor:pointer;font-weight:600}
+.auto summary span{color:var(--muted);font-weight:400}
+.auto ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:14px}
+.auto li b{font-weight:600}
+.auto li span{color:var(--muted)}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{flex-direction:column;gap:6px}}
+@media (prefers-reduced-motion:no-preference){.vbtn,.chip{transition:background .15s,border-color .15s}}
+.av{width:24px;height:24px;border-radius:50%;flex:none;display:inline-grid;place-items:center;color:#fff;font:700 10.5px var(--body);letter-spacing:.02em}
+.me .av{width:26px;height:26px}
+.me label{font-weight:600;color:var(--fg)}
+.txt{font:15px var(--body);border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);padding:7px 10px;min-width:0;flex:1 1 200px;max-width:320px}
+.txt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.linkbtn{border:none;background:none;color:var(--accent);font:600 13px var(--body);cursor:pointer;text-decoration:underline;padding:0}
+.res{margin-top:34px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:16px}
+.res h2{font-family:var(--display);font-weight:650;font-size:20px;margin:0}
+.res .stats .stat{background:var(--bg)}
+.rgrid{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:20px;align-items:start}
+.donutbox{display:grid;gap:10px;justify-items:center}
+#donut{width:170px;height:170px;transform:rotate(0deg)}
+#donutLegend{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13px;width:100%}
+#donutLegend li{display:flex;align-items:center;gap:8px}
+#donutLegend b{margin-left:auto;font-variant-numeric:tabular-nums}
+.sw{width:11px;height:11px;border-radius:3px;flex:none}
+.rhead{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.rhead span{display:flex;align-items:center;gap:6px}
+#rBars{display:grid;gap:6px}
+.rrow{display:grid;grid-template-columns:38px minmax(0,1fr) minmax(80px,1.1fr) 56px 76px;gap:8px;align-items:center;font-size:13px}
+.rcode{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.rtitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg)}
+.rtrack{height:12px;border-radius:3px;background:var(--sunk);display:flex;overflow:hidden}
+.seg{display:block;height:100%}
+.seg.yes{background:var(--yes)}.seg.no{background:var(--no)}.seg.ask{background:var(--ask)}
+.rnum{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;min-width:56px;text-align:right}
+.rdec{font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px;justify-self:start}
+.rdec.inc{background:var(--yes-soft);color:var(--yes)}.rdec.exc{background:var(--no-soft);color:var(--no)}.rdec.dis{background:var(--ask-soft);color:var(--ask)}
+.sheetlink{justify-self:start;display:inline-block;background:var(--accent);color:var(--bg);text-decoration:none;font-weight:600;font-size:14px;border-radius:8px;padding:8px 14px}
+@media (max-width:640px){.rgrid{grid-template-columns:1fr}.rrow{grid-template-columns:34px minmax(0,1fr) auto}.rrow .rtrack{grid-column:1 / -1;order:5}.rrow .rdec{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Instituto Legado · Revisão do Estatuto Social</div>
+    <h1>Votação dos itens do novo estatuto</h1>
+    <p class="lead">São 23 decisões, cada uma juntando itens do mesmo tema. Digite seu nome, marque se apoia, não apoia ou tem dúvida, e use o comentário para explicar ou perguntar. Correções e exigências legais entram automaticamente e estão listadas no final da página.</p>
+    <div class="me" id="me"></div>
+    <div class="notice" id="notice" hidden></div>
+    <div class="stats">
+      <div class="stat"><b id="sPeople">0</b><span>pessoas votaram</span></div>
+      <div class="stat"><b id="sMine">0/0</b><span>decisões com o seu voto</span></div>
+      <div class="stat"><b id="sAsk">0</b><span>com dúvida ou divergência</span></div>
+      <div class="stat"><b id="sDec">0</b><span>já decididas</span></div>
+    </div>
+  </header>
+  <div class="bar">
+    <div class="row" id="fView" role="group" aria-label="Mostrar"></div>
+    <div class="row" id="fSec" role="group" aria-label="Grupo"></div>
+  </div>
+  <main id="list"></main>
+  <section class="auto" id="auto">
+    <h2>Ajustes automáticos, sem votação</h2>
+    <p class="sub" style="margin:0;color:var(--muted)">Estes itens entram direto na nova versão: são correções de texto, exigências legais ou regras de funcionamento sem escolha real. Se discordar de algum, escreva abaixo.</p>
+    <div id="autoList"></div>
+    <div class="note" id="geralBox">
+      <label for="c-geral" style="font-weight:600;font-size:14px">Questionar algum ajuste automático</label>
+      <textarea id="c-geral" placeholder="Ex.: discordo do item sobre…"></textarea>
+      <div class="act"><button class="save" id="sv-geral" type="button" disabled>Salvar comentário</button><span class="status" id="st-geral"></span></div>
+    </div>
+    <div class="comments" id="geralComments" hidden></div>
+  </section>
+  <section class="res" id="resultado">
+    <h2>Resultado parcial</h2>
+    <p class="sub" style="margin:0;color:var(--muted)">Atualiza sozinho a cada voto. Os mesmos números estão na aba Painel da planilha de respostas.</p>
+    <div class="stats">
+      <div class="stat"><b id="rPeople">0</b><span>pessoas votaram</span></div>
+      <div class="stat"><b id="rFav">0</b><span>com consenso a favor</span></div>
+      <div class="stat"><b id="rAsk">0</b><span>com dúvida ou divergência</span></div>
+      <div class="stat"><b id="rDec">0</b><span>já decididas</span></div>
+    </div>
+    <div class="rgrid">
+      <div class="donutbox"><svg id="donut" viewBox="0 0 42 42" role="img" aria-label="Situação das decisões"></svg><ul id="donutLegend"></ul></div>
+      <div style="display:grid;gap:10px;min-width:0">
+        <div class="rhead"><span><i class="sw" style="background:var(--yes)"></i>Apoio</span><span><i class="sw" style="background:var(--no)"></i>Não apoio</span><span><i class="sw" style="background:var(--ask)"></i>Dúvida</span><span style="margin-left:auto">apoio · não · dúvida</span></div>
+        <div id="rBars"></div>
+      </div>
+    </div>
+    <a class="sheetlink" id="sheetLink" target="_blank" rel="noopener" hidden>Abrir planilha com o painel completo</a>
+  </section>
+  <section class="auto" id="adminBox">
+    <h2>Registrar decisões finais</h2>
+    <p class="sub" style="margin:0;color:var(--muted)">Só para quem conduz a votação. Com o PIN, aparece em cada item o campo para marcar Incluir, Não incluir ou Discutir.</p>
+    <div class="note"><div class="act"><label for="pin" style="font-weight:600;font-size:14px">PIN</label><input class="txt" id="pin" type="password" autocomplete="off"><button class="save" id="pinOk" type="button">Entrar</button><span class="status" id="pinSt"></span></div></div>
+  </section>
+</div>
+
+<script>
+
+const GROUPS = {
+  gov:["Governança e regras internas","Como o Instituto se organiza, se protege e decide."],
+  area:["Áreas de atuação","Incluir uma área no estatuto autoriza atuar nela e abre editais do tema; não obriga a atuar agora."],
+  rec:["Renda, recursos e títulos","Atividades que financiam a missão e preparação para certificações."]
+};
+// [id, grupo, título, por quê, [o que entra], prioridade, significado do voto (opcional)]
+const ITEMS = [
+["V1","gov","Diretor pode ser contratado para trabalho técnico nos projetos?","O Legado proíbe pagar pelo cargo, mas permite contratar o diretor como psicólogo, palestrante, captador etc. O Actus proíbe qualquer pagamento a diretor.",["Manter a exceção do Legado (art. 15, §3º)","Com travas: aprovação sem o voto do interessado, parecer prévio do Conselho Fiscal, teto de valor e divulgação no site"],"Essencial","Apoio = manter a exceção com as travas. Não apoio = adotar a regra do Actus (nenhum pagamento a diretor)."],
+["V2","gov","Pacote de integridade","Muitos editais, empresas e financiadores internacionais exigem estas políticas, principalmente de quem atende crianças.",["Regra contra nepotismo nas contratações","Código de Ética e Política de Proteção à Criança e ao Adolescente","Canal de denúncias ligado ao Conselho Fiscal"],"Recomendado"],
+["V3","gov","Instituto apartidário e proteção da marca","Evita uso político do Instituto e impede que terceiros usem o nome sem autorização. Ambos estão no Actus.",["Declarar o Instituto apartidário","Uso do nome e da marca só com autorização escrita"],"Recomendado"],
+["V4","gov","Controles financeiros","Hoje Presidente e Tesoureiro assinam juntos qualquer valor, e não há regra se o Tesoureiro faltar.",["Gastos acima de um valor exigem aprovação da Diretoria (valor no regimento)","Na falta do Tesoureiro, o Vice ou o Secretário assina com o Presidente","Doações com condição só após parecer do Conselho Fiscal"],"Recomendado"],
+["V5","gov","Criar um Conselho Consultivo","Traz padrinhos, especialistas, empresas e lideranças para perto, sem poder de decisão. Membros podem ser não associados. Está no Actus.",["Conselho sem poder de decisão, com mandato igual ao da Diretoria"],"Recomendado"],
+["V6","gov","Prever um(a) Coordenador(a) Executivo(a) contratado(a)","Profissionaliza a gestão do dia a dia sem remunerar diretor eleito.",["Cargo contratado, fora da Diretoria, subordinado a ela"],"Recomendado"],
+["V7","gov","Limitar reconduções da Diretoria","Hoje a reeleição é ilimitada. Alguns financiadores valorizam alternância; por outro lado, limita quem está fazendo um bom trabalho.",["Ex.: Presidente com no máximo uma recondução seguida"],"Opcional"],
+["V8","gov","Regras extras da Assembleia","Detalhes de funcionamento que o Actus tem e o Legado não.",["Proibir voto por procuração (com assembleia online ela é menos necessária)","Associados podem pedir inclusão de pauta antes da convocação"],"Opcional"],
+["V9","gov","Entrada e saída de associados","Hoje só há motivos graves e genéricos para exclusão, e a Diretoria decide sozinha sobre novos associados.",["Exclusão por faltas seguidas a assembleias ou contribuições atrasadas","Readmissão de quem saiu por inadimplência após quitar","Recurso à Assembleia quando a Diretoria negar a entrada"],"Recomendado"],
+["V10","gov","Novas formas de participação","Formaliza quem ajuda sem ser associado pleno e dá voz aos jovens atendidos.",["Categoria de Associado Colaborador ou Voluntário, sem voto","Conselho Jovem consultivo, sem voto, com adolescentes e jovens atendidos"],"Opcional"],
+["V11","area","Ampliar os públicos atendidos","Mantém criança, adolescente, mulher e família como foco principal e abre fundos e editais de outros públicos.",["Pessoa idosa","Pessoa com deficiência","Juventude de 15 a 29 anos","Outros grupos vulneráveis: situação de rua, migrantes, comunidades tradicionais, LGBTQIA+, egressos do sistema prisional"],"Recomendado"],
+["V12","area","Serviços de proteção e apoio às famílias","Encaixe direto com o foco atual. Cada serviço exige inscrição no CMAS ou CMDCA.",["Convivência e fortalecimento de vínculos, acolhimento, casa-abrigo para mulheres","Família acolhedora, apadrinhamento afetivo, medidas socioeducativas em meio aberto","Orientação jurídica, mediação de conflitos e justiça restaurativa"],"Recomendado"],
+["V13","area","Ser entidade formadora do Jovem Aprendiz","Liga direto com adolescentes e costuma gerar receita das empresas. Exige registro no CMDCA e no Ministério do Trabalho.",["Cursos de aprendizagem profissional para adolescentes e jovens"],"Recomendado"],
+["V14","area","Saúde e saúde mental","Atendimento clínico exige registro nos conselhos profissionais e na vigilância sanitária.",["Promoção, prevenção, atendimento psicológico, terapias, nutrição, reabilitação","Prevenção ao uso de álcool e outras drogas (sem acolhimento residencial)"],"Recomendado"],
+["V15","area","Educação, cultura, esporte e tecnologia","Abre leis de incentivo (Rouanet, Aldir Blanc, Esporte) e editais de educação.",["Reforço escolar, alfabetização de adultos, educação infantil, bolsas","Produção cultural e audiovisual, espetáculos, casas de cultura","Esporte, lazer e paradesporto","Inclusão digital e comunicação comunitária"],"Recomendado"],
+["V16","area","Trabalho, renda e segurança alimentar","Geração de renda para as famílias atendidas e editais de combate à fome.",["Economia solidária, cooperativismo, artesanato, empreendedorismo","Microcrédito (exige qualificação como OSCIP)","Banco de alimentos, cozinha comunitária, hortas"],"Recomendado"],
+["V17","area","Território, meio ambiente e emergências","Na região há investimento socioambiental de empresas, compensações ambientais e risco de desastres.",["Meio ambiente e educação ambiental","Ajuda humanitária em emergências e calamidades","Turismo de base comunitária e desenvolvimento local"],"Recomendado"],
+["V18","area","Causa animal","Atrai doadores pessoa física, mas foge do foco atual. Está no Actus.",["Proteção e bem-estar animal"],"Opcional"],
+["V19","area","Conhecimento e atuação em rede","Fortalece a reputação técnica do Instituto e pode gerar receita.",["Pesquisas, diagnósticos sociais e publicações","Capacitação de outras organizações, conselheiros e gestores públicos","Defesa de direitos em juízo (ação civil pública)"],"Opcional"],
+["V20","rec","Vendas, eventos, espaços e cursos","Fontes de renda próprias, sempre reinvestidas na missão. A maioria está no Actus.",["Venda de produtos, inclusive online","Restaurante, lanchonete e barracas em eventos","Eventos e espetáculos com ingresso","Gestão e locação de espaços","Cursos pagos para o público em geral e empresas"],"Recomendado"],
+["V21","rec","Serviços técnicos e propriedade intelectual","Boa fonte de receita na região. Atenção a impostos (ISS) e a manter a atividade social como principal.",["Consultoria a empresas e governos (projetos sociais, ESG)","Produção audiovisual e editorial","Licenciamento de marca, metodologias e direitos autorais"],"Opcional"],
+["V22","rec","Operações financeiras de maior risco","Podem afetar isenções e títulos; sempre com aprovação da Assembleia e aval do advogado.",["Participação em empresas ou negócios sociais","Financiamentos e empréstimos"],"Opcional"],
+["V23","rec","Preparar o estatuto para OSCIP e CEBAS","Evita nova assembleia e novo registro quando forem pedir os títulos. A OSCIP permite microcrédito; o CEBAS isenta a contribuição patronal ao INSS.",["Cláusulas exigidas pela lei das OSCIPs, como destinar o patrimônio a outra OSCIP na dissolução","Cláusulas exigidas pelo CEBAS"],"Recomendado"]
+];
+const AUTO = [
+["Correções de texto",[
+ ["Retirar “e no exterior” da aplicação dos recursos","Exigência para manter a imunidade tributária (CTN, art. 14). Projetos no exterior por parceria continuam possíveis."],
+ ["Corrigir citações legais do art. 15","Trocar o art. 54 do Código Civil pela base correta e conferir o Decreto 8.726/2016."],
+ ["Padronizar o nome do cargo de Relações Institucionais e Projetos e atualizar a ata","Número de capítulos e artigos e o erro “Conselho Fiscal Eleita”."],
+ ["Ajustes de redação","Casos omissos, quórum da segunda convocação, representante do associado pessoa jurídica e ordem dos suplentes."]]],
+["Exigências legais e proteção",[
+ ["Impedimentos na Diretoria","Membros de Poder, Ministério Público e dirigentes de órgão público, e parentes, não podem ser diretores. Sem isso o MROSC impede parcerias."],
+ ["Conselho Fiscal sem parentes de diretores e sem acúmulo de cargos",""],
+ ["Cláusula de conflito de interesse",""],
+ ["Atos estranhos à finalidade (fianças, avais) são nulos; dirigentes não respondem pelas obrigações do Instituto quando agem dentro dos poderes",""],
+ ["Atividades econômicas são meio, com resultado reinvestido; atendimento gratuito aos beneficiários",""],
+ ["Destino próprio para o patrimônio comprado com recursos públicos, em caso de dissolução",""]]],
+["Funcionamento",[
+ ["Regras de reunião da Diretoria","Convocação, quórum, maioria e ata."],
+ ["Vagas e posse","Eleição em 30 dias para cargo vago, permanência até a posse dos sucessores, posse em 30 dias, substituição entre diretores."],
+ ["Eleições e destituição","Rito de inscrição de chapas e direito de defesa antes de destituir."],
+ ["Votação e Conselho Fiscal","Maioria simples, voto secreto ou aclamação, desempate; Conselho Fiscal com reunião online e suplentes."],
+ ["Regimento interno homologado pela Assembleia; mudanças no estatuto não interrompem mandatos",""],
+ ["Associados","Saída com aviso prévio, sem indenização, definição de “pleno gozo dos direitos” e dever de atualizar o cadastro."]]],
+["Atuação e recursos",[
+ ["Cláusula aberta para outras atividades necessárias às finalidades",""],
+ ["Formas de atuação","Execução direta, apoio a outras organizações, repasse de recursos e bolsas, programa de voluntariado."],
+ ["Novas fontes de recursos","Leis de incentivo, emendas parlamentares, investimento de empresas, recursos destinados pela Justiça, fundo patrimonial, doação online, registro contábil de doações em bens e serviços."],
+ ["Contabilidade separada por atividade e auditoria quando exigida",""],
+ ["Inscrição nos conselhos de direitos e requisitos de utilidade pública",""],
+ ["Finalidades reorganizadas por eixos temáticos","Em vez de uma lista de “a” a “z” como no Actus."]]],
+["Fica como está no Legado (melhor que o Actus)",[
+ ["Presidente e Tesoureiro assinam juntos",""],
+ ["Tesoureiro cuida do controle financeiro",""],
+ ["Conselho Fiscal permanente",""],
+ ["Entrada de associados aberta, por pedido e aprovação",""],
+ ["Filiais só com aprovação da Assembleia",""]]]
+];
+const VOTES = {yes:"Apoio", no:"Não apoio", ask:"Tenho dúvida"};
+const VKEY = {"Apoio":"yes","Não apoio":"no","Tenho dúvida":"ask"};
+const DEC = {inc:"Incluir", exc:"Não incluir", dis:"Discutir"};
+const DKEY = {"Incluir":"inc","Não incluir":"exc","Discutir":"dis"};
+
+const S = { me:"", pin:null, isAdmin:false, votes:{}, names:{}, decisions:{}, view:"all", sec:"all", busy:0, loaded:false };
+const cards = {};
+const keyOf = n => String(n||"").trim().toLowerCase();
+function sGet(k){ try{ return localStorage.getItem(k)||""; }catch(e){ return ""; } }
+function sSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); }catch(e){} }
+function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+const mine = () => S.votes[keyOf(S.me)] || {};
+const nameOf = k => S.names[k] || k;
+function avatar(k){ const n=nameOf(k).trim(); const a=el("span","av",(n.split(/\s+/).map(w=>w[0]||"").slice(0,2).join("")||"?").toUpperCase()); let h=0; for(const ch of k) h=(h*31+ch.charCodeAt(0))%360; a.style.background="hsl("+h+" 45% 42%)"; return a; }
+
+// ---------- servidor ----------
+const API = "https://script.google.com/macros/s/AKfycbwiRYAXu_yWYg6K1yvTZK0g4tNglhaoVAYHPSnEzg0i50q7kaJ-zy35hbIZHTX4Fm858g/exec";
+function callGas(fn, args){
+  return new Promise((res, rej)=>{
+    if(!(window.google && google.script && google.script.run)){ rej(new Error("Abra pelo link publicado do Apps Script.")); return; }
+    google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args);
+  });
+}
+// Fala com o servidor sem depender da conta Google logada no navegador
+async function call(fn, ...args){
+  if(API.indexOf("http")!==0) return callGas(fn,args);
+  let j;
+  try{
+    const u = API + (API.indexOf("?")>=0 ? "&" : "?") + "api=" + encodeURIComponent(fn) + "&args=" + encodeURIComponent(JSON.stringify(args)) + "&t=" + Date.now();
+    const r = await fetch(u, {method:"GET", credentials:"omit", redirect:"follow"});
+    j = await r.json();
+  }catch(e){ if(window.google&&google.script) return callGas(fn,args); throw new Error("sem conexão com o servidor de votos. Tente recarregar a página."); }
+  if(j && j.error) throw new Error(j.error);
+  return j ? j.result : null;
+}
+function applyState(st){
+  const votes={}, names={};
+  (st.votes||[]).forEach(([name,item,voto,coment,t])=>{
+    const k=keyOf(name); names[k]=name; (votes[k]=votes[k]||{})[item]={v:VKEY[voto]||"", c:coment||"", t:t||0};
+  });
+  const dec={}; (st.decisions||[]).forEach(([item,d])=>{ if(DKEY[d]) dec[item]=DKEY[d]; });
+  S.votes=votes; S.names=names; S.decisions=dec; S.loaded=true;
+  if(S.me) S.names[keyOf(S.me)]=S.names[keyOf(S.me)]||S.me;
+  render();
+}
+async function refresh(){
+  if(S.busy) return;
+  try{ const st=await call("getState"); if(!S.busy) applyState(st); setNotice(""); }
+  catch(e){ setNotice("Não foi possível carregar os votos: "+(e&&e.message||e)); }
+}
+async function save(item, entry){
+  S.busy++;
+  try{ const st=await call("saveVote", S.me, item, entry.v?VOTES[entry.v]:"", entry.c||""); S.busy--; applyState(st); setNotice(""); return true; }
+  catch(e){ S.busy--; setNotice("Seu voto não foi salvo: "+(e&&e.message||e)); refresh(); return false; }
+}
+function needName(){
+  if(S.me) return false;
+  setNotice("Digite seu nome no topo da página para votar.");
+  const i=document.getElementById("nome"); if(i){ i.focus(); i.scrollIntoView({behavior:"smooth",block:"center"}); }
+  return true;
+}
+function setLocal(item, entry){
+  const k=keyOf(S.me); const m=S.votes[k]=S.votes[k]||{};
+  if(!entry.v && !entry.c) delete m[item]; else m[item]=entry;
+  S.names[k]=S.me;
+}
+function castVote(code,v){
+  if(needName()) return;
+  const cur=mine()[code]||{};
+  const next={v: cur.v===v ? "" : v, c: cur.c||"", t: Date.now()};
+  setLocal(code,next); render(); save(code,next);
+}
+async function saveComment(code){
+  if(needName()) return;
+  const k=cards[code]; const txt=k.ta2.value.trim().slice(0,2000);
+  const cur=mine()[code]||{};
+  const next={v:cur.v||"", c:txt, t:Date.now()};
+  setLocal(code,next); k.sv.disabled=true; k.st.textContent="Salvando…"; render();
+  k.st.textContent = (await save(code,next)) ? "Salvo" : "";
+}
+async function saveGeral(){
+  if(needName()) return;
+  const ta=document.getElementById("c-geral"), sv=document.getElementById("sv-geral"), st=document.getElementById("st-geral");
+  const next={v:"", c:ta.value.trim().slice(0,2000), t:Date.now()};
+  setLocal("GERAL",next); sv.disabled=true; st.textContent="Salvando…"; render();
+  st.textContent = (await save("GERAL",next)) ? "Salvo" : "";
+}
+async function saveDecision(code,val){
+  if(!S.isAdmin) return;
+  if(val) S.decisions[code]=val; else delete S.decisions[code];
+  render(); S.busy++;
+  try{ const st=await call("saveDecision", S.pin, code, val?DEC[val]:""); S.busy--; applyState(st); }
+  catch(e){ S.busy--; setNotice("A decisão não foi salva: "+(e&&e.message||e)); refresh(); }
+}
+
+// ---------- montagem ----------
+const VIEWS = [["all","Todas"],["todo","Sem o meu voto"],["ask","Com dúvida ou divergência"],["open","Ainda não decididas"]];
+function buildFilters(){
+  const fv=document.getElementById("fView"); fv.textContent="";
+  VIEWS.forEach(([k,l])=>{ const b=el("button","chip",l); b.type="button"; b.setAttribute("aria-pressed",S.view===k); b.onclick=()=>{S.view=k; buildFilters(); applyFilter();}; fv.append(b); });
+  const fs=document.getElementById("fSec"); fs.textContent="";
+  [["all","Todos os grupos"],...Object.keys(GROUPS).map(k=>[k,GROUPS[k][0]]),["auto","Ajustes automáticos"],["res","Resultado"]].forEach(([k,l])=>{ const b=el("button","chip",l); b.type="button"; b.setAttribute("aria-pressed",S.sec===k); b.onclick=()=>{ if(k==="auto"||k==="res"){ document.getElementById(k==="res"?"resultado":"auto").scrollIntoView({behavior:"smooth"}); return; } S.sec=k; buildFilters(); applyFilter();}; fs.append(b); });
+}
+function buildList(){
+  const list=document.getElementById("list");
+  Object.keys(GROUPS).forEach(gk=>{
+    const sec=el("section","sec"); sec.dataset.sec=gk;
+    sec.append(el("h2",null,GROUPS[gk][0]), el("p","sub",GROUPS[gk][1]));
+    const box=el("div","items"); sec.append(box);
+    ITEMS.filter(i=>i[1]===gk).forEach(it=>box.append(buildCard(it)));
+    list.append(sec);
+  });
+  const em=el("p","empty","Nenhuma decisão neste filtro."); em.id="empty"; em.hidden=true; list.append(em);
+  const al=document.getElementById("autoList");
+  AUTO.forEach(([g,rows])=>{ const d=el("details"); const s=el("summary",null,g+" "); s.append(el("span",null,"("+rows.length+")")); d.append(s); const ul=el("ul"); rows.forEach(([t,w])=>{ const li=el("li"); li.append(el("b",null,t)); if(w){ li.append(document.createTextNode(". ")); li.append(el("span",null,w)); } ul.append(li); }); d.append(ul); al.append(d); });
+  const ta=document.getElementById("c-geral"), sv=document.getElementById("sv-geral");
+  ta.oninput=()=>{ sv.disabled = ta.value.trim()===((mine().GERAL||{}).c||""); document.getElementById("st-geral").textContent=""; };
+  sv.onclick=saveGeral;
+}
+function buildCard([code,,title,why,inc,prio,meaning]){
+  const c=el("article","card"); c.id="item-"+code;
+  const head=el("div","head"); head.append(el("span","code",code));
+  const t=el("div"); t.style.minWidth="0";
+  t.append(el("p","title",title), el("p","why",why));
+  const ul=el("ul","inc"); inc.forEach(x=>ul.append(el("li",null,x))); t.append(ul);
+  if(meaning) t.append(el("p","meaning",meaning));
+  const tags=el("div","tags"); tags.append(el("span","tag"+(prio==="Essencial"?" p0":""),prio));
+  const dtag=el("span","tag dec"); dtag.hidden=true; tags.append(dtag);
+  t.append(tags); head.append(t); c.append(head);
+  const vote=el("div","vote"); const btn={};
+  Object.entries(VOTES).forEach(([k,l])=>{ const b=el("button","vbtn "+k); b.type="button"; b.append(document.createTextNode(l)); const n=el("span","n","0"); b.append(n); b.onclick=()=>castVote(code,k); vote.append(b); btn[k]={b,n}; });
+  c.append(vote);
+  const tally=el("div","tally"); const ty=el("i","y"),tn=el("i","n"),tq=el("i","a"); tally.append(ty,tn,tq); c.append(tally);
+  const who=el("div","who"); c.append(who);
+  const note=el("div","note");
+  const ta2=el("textarea"); ta2.id="c-"+code; ta2.placeholder="Comentário ou dúvida (opcional). Se apoia só parte do pacote, diga qual."; ta2.setAttribute("aria-label","Comentário sobre "+code);
+  const act=el("div","act"); const sv=el("button","save","Salvar comentário"); sv.type="button"; sv.disabled=true; const st=el("span","status");
+  ta2.oninput=()=>{ sv.disabled = ta2.value.trim()===((mine()[code]||{}).c||""); st.textContent=""; };
+  sv.onclick=()=>saveComment(code);
+  act.append(sv,st); note.append(ta2,act); c.append(note);
+  const comments=el("div","comments"); comments.hidden=true; c.append(comments);
+  const admin=el("div","admin"); admin.hidden=true;
+  const lab=el("label",null,"Decisão final:"); lab.htmlFor="d-"+code;
+  const sel=el("select"); sel.id="d-"+code;
+  [["","— ainda não decidida —"],...Object.entries(DEC)].forEach(([k,l])=>{ const o=el("option",null,l); o.value=k; sel.append(o); });
+  sel.onchange=()=>saveDecision(code, sel.value);
+  admin.append(lab,sel); c.append(admin);
+  cards[code]={c,btn,bars:{yes:ty,no:tn,ask:tq},who,ta2,sv,st,comments,admin,sel,dtag};
+  return c;
+}
+
+// ---------- desenho ----------
+function tallyFor(code){
+  const r={yes:[],no:[],ask:[],notes:[]};
+  for(const [k,items] of Object.entries(S.votes)){
+    const v=items[code]; if(!v) continue;
+    if(v.v && r[v.v]) r[v.v].push(k);
+    if(v.c) r.notes.push([k,v.v,v.c,v.t||0]);
+  }
+  r.notes.sort((a,b)=>a[3]-b[3]);
+  return r;
+}
+function commentRow(k,v,txt){ const row=el("div","cm"); row.append(avatar(k)); const b=el("div"); b.append(el("span","nm",nameOf(k))); if(v&&VOTES[v]) b.append(el("span","pill "+v,VOTES[v])); b.append(el("p",null,txt)); row.append(b); return row; }
+
+function render(){
+  const my=mine();
+  let mineCount=0, askCount=0, decCount=0;
+  const people=Object.values(S.votes).filter(items=>Object.entries(items).some(([c,x])=>c!=="GERAL"&&x.v)).length;
+  ITEMS.forEach(([code])=>{
+    const k=cards[code], t=tallyFor(code), tot=t.yes.length+t.no.length+t.ask.length;
+    const m=my[code]||{};
+    if(m.v) mineCount++;
+    const contested = t.ask.length>0 || (t.yes.length>0 && t.no.length>0);
+    if(contested) askCount++;
+    k.contested=contested; k.voted=!!m.v;
+    Object.keys(VOTES).forEach(v=>{ k.btn[v].n.textContent=t[v].length; k.btn[v].b.setAttribute("aria-pressed", m.v===v); k.bars[v].style.width = tot? (t[v].length/tot*100)+"%" : "0"; });
+    k.who.textContent="";
+    [["yes","Apoiam"],["no","Não apoiam"],["ask","Com dúvida"]].forEach(([v,l])=>{ if(t[v].length){ const d=el("div"); d.append(el("b",null,l+": "), document.createTextNode(t[v].map(nameOf).join(", "))); k.who.append(d);} });
+    k.comments.textContent=""; k.comments.hidden=t.notes.length===0;
+    t.notes.forEach(([u,v,txt])=>k.comments.append(commentRow(u,v,txt)));
+    if(document.activeElement!==k.ta2 && k.sv.disabled) k.ta2.value=m.c||"";
+    const d=S.decisions[code]; k.decided=!!d; if(d) decCount++;
+    k.c.classList.remove("decided-inc","decided-exc","decided-dis"); if(d) k.c.classList.add("decided-"+d);
+    k.dtag.hidden=!d; if(d){ k.dtag.className="tag dec "+d; k.dtag.textContent="Decisão: "+DEC[d]; }
+    k.admin.hidden=!S.isAdmin; if(document.activeElement!==k.sel) k.sel.value=d||"";
+  });
+  const gc=document.getElementById("geralComments"); gc.textContent="";
+  const gn=Object.entries(S.votes).filter(([,items])=>items.GERAL&&items.GERAL.c); gc.hidden=!gn.length;
+  gn.forEach(([k,items])=>gc.append(commentRow(k,null,items.GERAL.c)));
+  const gta=document.getElementById("c-geral"); if(document.activeElement!==gta && document.getElementById("sv-geral").disabled) gta.value=(my.GERAL||{}).c||"";
+  document.getElementById("sPeople").textContent=people;
+  document.getElementById("sMine").textContent=mineCount+"/"+ITEMS.length;
+  document.getElementById("sAsk").textContent=askCount;
+  document.getElementById("sDec").textContent=decCount;
+  renderResults();
+  applyFilter();
+}
+function applyFilter(){
+  let any=false;
+  document.querySelectorAll("section.sec").forEach(sec=>{
+    let shown=0;
+    sec.querySelectorAll(".card").forEach(c=>{
+      const k=cards[c.id.slice(5)];
+      let ok = S.sec==="all" || sec.dataset.sec===S.sec;
+      if(ok && S.view==="todo") ok=!k.voted;
+      if(ok && S.view==="ask") ok=!!k.contested;
+      if(ok && S.view==="open") ok=!k.decided;
+      c.hidden=!ok; if(ok) shown++;
+    });
+    sec.hidden=shown===0; if(shown) any=true;
+  });
+  document.getElementById("empty").hidden=any;
+}
+// ---------- resultado parcial ----------
+const SIT = [
+  ["fav","Consenso a favor","var(--yes)"],
+  ["ask","Com dúvida","var(--ask)"],
+  ["div","Divergência","#D9A63A"],
+  ["con","Consenso contra","var(--no)"],
+  ["none","Sem votos","var(--line)"]
+];
+function situacao(t){
+  const y=t.yes.length,n=t.no.length,a=t.ask.length;
+  if(!y&&!n&&!a) return "none";
+  if(!n&&!a) return "fav";
+  if(!y&&!a) return "con";
+  if(a) return "ask";
+  return "div";
+}
+function svgEl(tag,attrs){ const e=document.createElementNS("http://www.w3.org/2000/svg",tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
+function renderResults(){
+  const counts={fav:0,ask:0,div:0,con:0,none:0}; const rows=[]; let maxTot=1;
+  ITEMS.forEach(([code,,title])=>{ const t=tallyFor(code); const s=situacao(t); counts[s]++; const tot=t.yes.length+t.no.length+t.ask.length; if(tot>maxTot) maxTot=tot; rows.push({code,title,y:t.yes.length,n:t.no.length,a:t.ask.length,tot,s}); });
+  const people=Object.values(S.votes).filter(items=>Object.entries(items).some(([c,x])=>c!=="GERAL"&&x.v)).length;
+  const dec=Object.keys(S.decisions).length;
+  document.getElementById("rPeople").textContent=people;
+  document.getElementById("rFav").textContent=counts.fav;
+  document.getElementById("rAsk").textContent=counts.ask+counts.div;
+  document.getElementById("rDec").textContent=dec+" de "+ITEMS.length;
+  // rosca
+  const svg=document.getElementById("donut"); svg.textContent="";
+  svg.append(svgEl("circle",{cx:21,cy:21,r:15.915,fill:"none","stroke-width":6,style:"stroke:var(--sunk)"}));
+  let acc=0;
+  SIT.forEach(([k,,cor])=>{ const pct=counts[k]/ITEMS.length*100; if(!pct) return; svg.append(svgEl("circle",{cx:21,cy:21,r:15.915,fill:"none","stroke-width":6,"stroke-dasharray":pct+" "+(100-pct),"stroke-dashoffset":25-acc,style:"stroke:"+cor})); acc+=pct; });
+  const tx=svgEl("text",{x:21,y:21,"text-anchor":"middle","dominant-baseline":"central",style:"fill:var(--fg);font:700 8px var(--display)"}); tx.textContent=ITEMS.length; svg.append(tx);
+  const tx2=svgEl("text",{x:21,y:27.5,"text-anchor":"middle",style:"fill:var(--muted);font:3px var(--body)"}); tx2.textContent="decisões"; svg.append(tx2);
+  const lg=document.getElementById("donutLegend"); lg.textContent="";
+  SIT.forEach(([k,l,cor])=>{ const li=el("li"); const sw=el("span","sw"); sw.style.background=cor; li.append(sw, el("span",null,l), el("b",null,String(counts[k]))); lg.append(li); });
+  // barras
+  const bars=document.getElementById("rBars"); bars.textContent="";
+  rows.forEach(r=>{
+    const row=el("div","rrow"); row.title=r.title;
+    row.append(el("span","rcode",r.code), el("span","rtitle",r.title));
+    const track=el("div","rtrack");
+    [["y","yes"],["n","no"],["a","ask"]].forEach(([k,cls])=>{ if(r[k]){ const seg=el("i","seg "+cls); seg.style.width=(r[k]/maxTot*100)+"%"; seg.title=VOTES[cls]+": "+r[k]; track.append(seg);} });
+    row.append(track, el("span","rnum", r.tot ? (r.y+" · "+r.n+" · "+r.a) : "—"));
+    const dk=S.decisions[r.code]; row.append(el("span", dk ? "rdec "+dk : "rdec", dk ? DEC[dk] : ""));
+    bars.append(row);
+  });
+}
+
+function setNotice(t){ const n=document.getElementById("notice"); n.textContent=t; n.hidden=!t; }
+
+// ---------- identificação ----------
+function showMe(){
+  const box=document.getElementById("me"); box.textContent="";
+  if(S.me){
+    box.append(avatar(keyOf(S.me)), document.createTextNode("Votando como "), el("b",null,S.me));
+    const b=el("button","linkbtn","Trocar nome"); b.type="button";
+    b.onclick=()=>{ S.me=""; sSet("legado-nome",""); showMe(); render(); };
+    box.append(b);
+  } else {
+    const lab=el("label",null,"Seu nome para votar"); lab.htmlFor="nome";
+    const inp=el("input","txt"); inp.id="nome"; inp.placeholder="Nome e sobrenome"; inp.autocomplete="name"; inp.maxLength=60;
+    const ok=el("button","save","Começar a votar"); ok.type="button";
+    const go=()=>{ const v=inp.value.trim(); if(v.length<3){ inp.focus(); return; } S.me=v; sSet("legado-nome",v); setNotice(""); showMe(); render(); };
+    ok.onclick=go; inp.onkeydown=e=>{ if(e.key==="Enter") go(); };
+    box.append(lab,inp,ok);
+  }
+}
+function buildAdmin(){
+  const inp=document.getElementById("pin"), ok=document.getElementById("pinOk"), st=document.getElementById("pinSt");
+  const go=async()=>{ st.textContent="Conferindo…"; try{ const valid=await call("checkPin", inp.value); if(valid){ S.pin=inp.value; S.isAdmin=true; st.textContent="Pronto. Use o campo “Decisão final” em cada item."; render();
+        try{ const url=await call("getPlanilhaUrl", S.pin); const a=document.getElementById("sheetLink"); a.href=url; a.hidden=false; }catch(e){} } else st.textContent="PIN incorreto."; }catch(e){ st.textContent="Não foi possível conferir o PIN."; } };
+  ok.onclick=go; inp.onkeydown=e=>{ if(e.key==="Enter") go(); };
+}
+
+S.me=sGet("legado-nome");
+buildFilters(); buildList(); showMe(); buildAdmin(); render(); refresh();
+setInterval(()=>{ if(!document.hidden) refresh(); }, 20000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refresh(); });
+</script>
+</body>
+</html>
